@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Course, Module, Subject, Comment, Rating
+from .models import Course, Module, Subject, Comment, Rating, Favourite
 
 
 class SubjectsListSerializer(serializers.ModelSerializer):
@@ -13,6 +13,11 @@ class CoursesListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = ('id', 'subject', 'title', 'overview', 'avr_rating', )
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['likes'] = instance.likes.count()
+        return rep
 
 
 class ModulesListSerializer(serializers.ModelSerializer):
@@ -30,6 +35,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
+        rep['like'] = instance.likes.count()
         rep['comments'] = CommentSerializer(instance.comments.all(), many=True).data
         return rep
 
@@ -109,3 +115,19 @@ class RatingSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         validated_data['user'] = request.user
         return super().create(validated_data)
+
+
+class FavouriteCoursesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Favourite
+        fields = ('course', 'id')
+
+        def get_favourite(self, obj):
+            if obj.favourite:
+                return obj.favourite
+            return ''
+
+        def to_representation(self, instance):
+            rep = super().to_representation(instance)
+            rep['favourite'] = self.get_favourite(instance)
+            return rep

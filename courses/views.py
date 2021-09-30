@@ -1,14 +1,15 @@
 from django_filters import rest_framework as rest_filter
 from rest_framework import views, filters, mixins, viewsets
 from rest_framework.decorators import action
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from .models import Course, Module, Subject, Like, Comment, Rating
+from .models import Course, Module, Subject, Like, Comment, Rating, Favourite
 from .serializers import (CoursesListSerializer, CourseDetailSerializer, CreateCourseSerializer,
                           SubjectsListSerializer, SubjectDetailSerializer, CreateSubjectSerializer,
-                          ModuleSerializer, CommentSerializer, RatingSerializer, )
+                          ModuleSerializer, CommentSerializer, RatingSerializer, FavouriteCoursesSerializer, )
 from .permissions import IsAdminUser, IsAuthor, IsAuthorOrIsAdmin
 
 
@@ -71,10 +72,27 @@ class CourseViewSet(viewsets.ModelViewSet):
             message = 'liked'
         return Response(message, status=200)
 
+    @action(['POST'], detail=True)
+    def favourite(self, request, pk=None):
+        course = self.get_object()
+        user = request.user
+        try:
+            favourite = Favourite.objects.get(course=course, user=user)
+            favourite.is_favourite = not favourite.is_favourite
+            if favourite.is_favourite:
+                favourite.save()
+            else:
+                favourite.delete()
+            message = 'added to favourites' if favourite.is_favourite else 'deleted in favourites'
+        except Favourite.DoesNotExist:
+            Favourite.objects.create(course=course, user=user, is_favourite=True)
+            message = 'added to favourites'
+        return Response(message, status=200)
+
     def get_permissions(self):
         if self.action == 'list' or self.action == 'retrieve':
             return []
-        elif self.action == 'create' or self.action == 'like':
+        elif self.action == 'create' or self.action == 'like' or self.action == 'favourite':
             return [IsAuthenticated()]
         return [IsAuthorOrIsAdmin()]
 
@@ -114,3 +132,13 @@ class RatingViewSet(mixins.CreateModelMixin,
         if self.action == 'create':
             return [IsAuthenticated()]
         return [IsAuthor()]
+
+
+class FavouritesListView(ListAPIView):
+    permission_classes = [IsAuthor]
+    serializer_class = FavouriteCoursesSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        return Favourite.objects.filter(user=user)
+

@@ -5,3 +5,7 @@ Pillow
 python-decouple
 django-filter
 drf_yasg
+celery
+redis
+redis-server
+redis-tools

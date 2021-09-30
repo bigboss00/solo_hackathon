@@ -97,3 +97,13 @@ class Like(models.Model):
                              on_delete=models.CASCADE,
                              related_name='likes')
     is_liked = models.BooleanField(default=False)
+
+
+class Favourite(models.Model):
+    course = models.ForeignKey(Course,
+                               on_delete=models.CASCADE,
+                               related_name='favourites')
+    user = models.ForeignKey(User,
+                             on_delete=models.CASCADE,
+                             related_name='favourites')
+    is_favourite = models.BooleanField(default=False)
